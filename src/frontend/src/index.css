@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #0ea5e9;
+  --color-secondary: #6366f1;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f8fafc;
+}
+
+.alert-green { background-color: #22c55e; }
+.alert-yellow { background-color: #f59e0b; }
+.alert-orange { background-color: #f97316; }
+.alert-red { background-color: #ef4444; }
+
+.map-container {
+  width: 100%;
+  height: 100%;
+}
+
+.metric-card {
+  @apply bg-white rounded-lg shadow-md p-4 transition-all duration-200 hover:shadow-lg;
+}
+
+.btn-primary {
+  @apply bg-sky-500 text-white px-4 py-2 rounded-lg hover:bg-sky-600 transition-colors;
+}
+
+.btn-secondary {
+  @apply bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors;
+}

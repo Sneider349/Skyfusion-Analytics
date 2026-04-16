@@ -1,0 +1,22 @@
+# Deep Learning Dependencies para Skyfusion Analytics
+# Predicción de Extensión de Agua
+
+# Core ML
+tensorflow>=2.12.0
+numpy>=1.21.0
+pandas>=1.3.0
+scikit-learn>=1.0.0
+scipy>=1.7.0
+
+# Geospatial
+earthengine-api>=0.1.0
+opencv-python>=4.5.0
+Pillow>=8.0.0
+
+# Utilities
+tqdm>=4.62.0
+PyYAML>=6.0
+h5py>=3.0.0
+
+# Optional: GPU support (uncomment if using GPU)
+# tensorflow-gpu>=2.12.0

@@ -1,0 +1,36 @@
+[
+  {
+    "id": "user-001",
+    "username": "admin",
+    "email": "admin@skyfusion.com",
+    "password": "$2b$10$fQbRAG5pwNUjocgrLeqAZ.Xhe0K3akuZOU1R0UeV6LSmeSxQ2VIdS",
+    "role": "admin",
+    "fullName": "Administrador Skyfusion",
+    "catchments": ["COMBEIMA", "COELLO", "OPHIR"],
+    "preferences": {
+      "notifications": true,
+      "emailAlerts": true,
+      "language": "es"
+    },
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "lastLogin": null,
+    "status": "active"
+  },
+  {
+    "id": "user-002",
+    "username": "operador",
+    "email": "operador@skyfusion.com",
+    "password": "$2b$10$fQbRAG5pwNUjocgrLeqAZ.Xhe0K3akuZOU1R0UeV6LSmeSxQ2VIdS",
+    "role": "operator",
+    "fullName": "Operador de Cuenca",
+    "catchments": ["COMBEIMA"],
+    "preferences": {
+      "notifications": true,
+      "emailAlerts": false,
+      "language": "es"
+    },
+    "createdAt": "2024-01-15T00:00:00.000Z",
+    "lastLogin": null,
+    "status": "active"
+  }
+]

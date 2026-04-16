@@ -31,6 +31,45 @@ cd src/frontend && npm start
 
 ---
 
+## Sistema de Agentes
+
+Sistema de orquestación basado en eventos para análisis geoespacial e inteligencia artificial.
+
+### Estructura
+
+```
+agents/
+├── analysis-agent.js      # Análisis NDVI/NDWI con OpenCV
+├── prediction-agent.js    # Predicción de caudal con TensorFlow
+├── reporting-agent.js     # Generación de reportes con LLM
+├── orchestrator.js        # Orquestador de agentes
+└── package.json
+```
+
+### Uso
+
+```bash
+cd agents && npm install
+node orchestrator.js
+```
+
+### Pipeline de Eventos
+
+```
+DATA_INGESTED → AnalysisAgent → PredictionAgent → ReportingAgent → REPORT_READY
+```
+
+### Configuración
+
+```env
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=password
+OPENAI_API_KEY=sk-...
+```
+
+---
+
 ## Modo Demo (Sin Neo4j)
 
 Por defecto la app corre en modo demo con datos simulados:
@@ -69,11 +108,14 @@ docker-compose up backend frontend
 ## Tecnologías
 
 | Capa | Tecnología |
-|------|-------------|
+|------|------------|
 | Frontend | React, Tailwind CSS, Leaflet, Chart.js |
 | Backend | Node.js, Express, Socket.io |
-| DB | Neo4j (opcional) |
-| ML | TensorFlow (prototipo) |
+| Agentes | EventEmitter, child_process |
+| DB | Neo4j |
+| ML | TensorFlow |
+| Visión | OpenCV |
+| IA | OpenAI/Anthropic/LLM |
 
 ---
 

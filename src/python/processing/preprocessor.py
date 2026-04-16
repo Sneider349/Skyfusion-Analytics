@@ -16,8 +16,11 @@ Autor: Skyfusion Analytics - Geospatial Agent
 """
 
 import os
+import sys
 import json
+import csv
 import logging
+import hashlib
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 from pathlib import Path
@@ -35,6 +38,14 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+sys.path.insert(0, str(Path(__file__).parent))
+try:
+    from setup_raw_directory import DirectoryConfig, CatalogManager, ChecksumManager
+except ImportError:
+    DirectoryConfig = None
+    CatalogManager = None
+    ChecksumManager = None
 
 
 class Config:
@@ -57,6 +68,22 @@ class Config:
         'start': '1969-01-01',
         'end': '2023-12-31'
     }
+    
+    DOWNLOAD_RAW = os.getenv('DOWNLOAD_RAW', 'false').lower() == 'true'
+    DRIVE_FOLDER = os.getenv('DRIVE_FOLDER', 'Skyfusion_Combeima')
+    
+    @classmethod
+    def get_data_raw_path(cls) -> Optional[Path]:
+        if DirectoryConfig:
+            return DirectoryConfig.DATA_RAW
+        project_root = Path(__file__).parent.parent.parent.parent.resolve()
+        return project_root / 'data' / 'raw' / 'satelite'
+    
+    @classmethod
+    def get_catalog_path(cls) -> Optional[Path]:
+        if DirectoryConfig:
+            return DirectoryConfig.CATALOG_FILE
+        return cls.get_data_raw_path() / 'metadata' / 'catalog.csv'
 
 
 class CuencaCombeima:
@@ -141,6 +168,105 @@ class ColeccionesSatelitales:
     }
     
     COLECCIONES = [LANDSAT_MSS, LANDSAT_TM, LANDSAT_OLI, SENTINEL2]
+
+
+class RawDataDownloader:
+    """Gestor de descarga de datos crudos locales"""
+    
+    SENSOR_DIRECTORIES = {
+        'LANDSAT_MSS': 'landsat/mss',
+        'LANDSAT_TM': 'landsat/tm',
+        'LANDSAT_OLI': 'landsat/oli',
+        'SENTINEL2_SR': 'sentinel2/L2A'
+    }
+    
+    def __init__(self, config: Config):
+        self.config = config
+        self.data_raw_path = config.get_data_raw_path()
+        self.catalog_path = config.get_catalog_path()
+        self._init_catalog()
+    
+    def _init_catalog(self):
+        """Inicializa el catálogo si no existe"""
+        if self.catalog_path and not self.catalog_path.exists():
+            self.catalog_path.parent.mkdir(parents=True, exist_ok=True)
+            columns = [
+                'scene_id', 'sensor', 'satellite', 'product_level',
+                'acquisition_date', 'cloud_cover',
+                'local_path', 'gee_asset_id', 'gee_collection',
+                'checksum_md5', 'file_size_bytes', 'download_status',
+                'download_timestamp', 'downloaded_by', 'gee_task_id'
+            ]
+            with open(self.catalog_path, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=columns)
+                writer.writeheader()
+            logger.info(f"Catálogo creado: {self.catalog_path}")
+    
+    def get_sensor_path(self, sensor_name: str) -> Path:
+        """Obtiene la ruta base para un sensor"""
+        rel_path = self.SENSOR_DIRECTORIES.get(sensor_name, 'unknown')
+        return self.data_raw_path / rel_path
+    
+    def build_local_path(self, sensor_name: str, img_id: str, fecha: str) -> Path:
+        """Construye la ruta local para una imagen"""
+        sensor_path = self.get_sensor_path(sensor_name)
+        date_parts = fecha.split('-')
+        year_path = sensor_path / date_parts[0] / date_parts[1] / date_parts[2]
+        year_path.mkdir(parents=True, exist_ok=True)
+        return year_path / f"{img_id}.tif"
+    
+    def calculate_md5(self, file_path: Path) -> str:
+        """Calcula hash MD5 de un archivo"""
+        md5_hash = hashlib.md5()
+        with open(file_path, 'rb') as f:
+            for chunk in iter(lambda: f.read(4096), b''):
+                md5_hash.update(chunk)
+        return md5_hash.hexdigest()
+    
+    def add_to_catalog(self, entry: Dict) -> bool:
+        """Añade una entrada al catálogo"""
+        if not self.catalog_path:
+            return False
+        
+        try:
+            entry.setdefault('download_status', 'pending')
+            entry.setdefault('download_timestamp', datetime.now().isoformat())
+            entry.setdefault('downloaded_by', 'preprocessor.py')
+            
+            columns = [
+                'scene_id', 'sensor', 'satellite', 'product_level',
+                'acquisition_date', 'cloud_cover',
+                'local_path', 'gee_asset_id', 'gee_collection',
+                'checksum_md5', 'file_size_bytes', 'download_status',
+                'download_timestamp', 'downloaded_by', 'gee_task_id'
+            ]
+            
+            with open(self.catalog_path, 'a', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=columns)
+                writer.writerow(entry)
+            
+            logger.debug(f"Añadido al catálogo: {entry.get('scene_id')}")
+            return True
+        except Exception as e:
+            logger.error(f"Error añadiendo al catálogo: {e}")
+            return False
+    
+    def export_to_drive(self, img: ee.Image, description: str, coleccion: Dict) -> ee.batch.Task:
+        """Inicia exportación a Google Drive"""
+        task = ee.batch.Export.image.toDrive(
+            image=img,
+            description=description,
+            folder=self.config.DRIVE_FOLDER,
+            fileNamePrefix=f"{coleccion['name']}_{description}",
+            region=CuencaCombeima.get_geometry(),
+            scale=coleccion['resolution'],
+            crs='EPSG:4326',
+            maxPixels=1e10,
+            fileFormat='GeoTIFF'
+        )
+        task.start()
+        logger.info(f"Export iniciada a Google Drive: {description}")
+        return task
 
 
 class EventBusPublisher:
@@ -234,6 +360,7 @@ class GEEPreprocessor:
         self.config = config
         self.geometria = CuencaCombeima.get_geometry()
         self.reporte = self._inicializar_reporte()
+        self.raw_downloader = RawDataDownloader(config) if config.DOWNLOAD_RAW else None
     
     def _inicializar_reporte(self) -> Dict[str, Any]:
         """Inicializa el reporte de procesamiento"""
@@ -312,10 +439,12 @@ class GEEPreprocessor:
                     
                     asset_id = f"{self.config.ASSET_BASE_PATH}/{coleccion['name']}/{img_id}"
                     
+                    fecha_str = datetime.fromtimestamp(fecha / 1000).strftime('%Y-%m-%d')
+                    
                     imagen_info = {
                         'id': img_id,
                         'asset_id': asset_id,
-                        'fecha': datetime.fromtimestamp(fecha / 1000).strftime('%Y-%m-%d'),
+                        'fecha': fecha_str,
                         'nubosidad': cloud_cover,
                         'coleccion': coleccion['name'],
                         'resolution': coleccion['resolution']
@@ -324,6 +453,28 @@ class GEEPreprocessor:
                     self._exportar_asset(img, asset_id, coleccion)
                     imagenes_validas.append(imagen_info)
                     self.reporte['assets_creados'].append(asset_id)
+                    
+                    if self.raw_downloader:
+                        catalog_entry = {
+                            'scene_id': img_id,
+                            'sensor': coleccion['name'],
+                            'satellite': coleccion['display_name'],
+                            'product_level': coleccion['id'].split('/')[1] if '/' in coleccion['id'] else 'UNKNOWN',
+                            'acquisition_date': fecha_str,
+                            'cloud_cover': str(cloud_cover),
+                            'local_path': str(self.raw_downloader.build_local_path(
+                                coleccion['name'], img_id, fecha_str
+                            )),
+                            'gee_asset_id': asset_id,
+                            'gee_collection': coleccion['id'],
+                            'gee_task_id': f'Combeima_{coleccion["name"]}_{img_id}'
+                        }
+                        self.raw_downloader.add_to_catalog(catalog_entry)
+                        
+                        task = self.raw_downloader.export_to_drive(
+                            img, img_id, coleccion
+                        )
+                        logger.info(f"Descarga cruda iniciada: {img_id}")
                     
                 except Exception as e:
                     error_msg = f"Error procesando imagen {i} en {coleccion['name']}: {str(e)}"
@@ -385,6 +536,10 @@ class GEEPreprocessor:
         
         self.reporte['timestamp_fin'] = datetime.now().isoformat()
         self.reporte['total_imagenes_procesadas'] = len(todas_imagenes)
+        self.reporte['modo_descarga_cruda'] = self.config.DOWNLOAD_RAW
+        
+        if self.raw_downloader:
+            self.reporte['catalog_path'] = str(self.raw_downloader.catalog_path)
         
         logger.info("=" * 60)
         logger.info("RESUMEN DEL PROCESAMIENTO")

@@ -10,9 +10,10 @@
 | Backend Node.js | ✅ Operacional | Alta |
 | Sistema de Agentes | ✅ Implementado | Alta |
 | Preprocessor GEE | ✅ Implementado | Alta |
+| Caudal Predictor (LSTM) | ✅ Implementado | Alta |
 | Estructura datos raw | ✅ Implementado | Alta |
 | Dev Container (Codespaces) | ✅ Implementado | Alta |
-| Pipeline ML | 🔄 En desarrollo | Media |
+| Validación ML | ✅ Implementado | Alta |
 | Documentación | 🔄 En desarrollo | Media |
 
 ---
@@ -37,9 +38,86 @@
 - [x] Modo descarga cruda opcional
 
 **Pendiente:**
-- [ ] Implementar descarga directa a `data/raw/satelite/` (actualmente solo Google Drive)
+- [ ] Implementar descarga directa a `data/raw/satelite/`
 - [ ] Script de sincronización GEE → sistema local
 - [ ] Pipeline de reprocesamiento incremental
+
+---
+
+## Módulo: Caudal Predictor (LSTM)
+
+### Estado: ✅ Implementado
+
+**Archivos creados:**
+- `src/python/ml/caudal_predictor.py` - Script de entrenamiento LSTM
+- `src/python/ml/validation.py` - Métricas de validación
+- `src/python/ml/generate_sample_data.py` - Generador de datos sintéticos
+- `data/historical/streamflow.csv` - Datos de caudal (sintéticos)
+- `data/historical/precipitation.csv` - Datos de precipitación (sintéticos)
+- `data/historical/river_width.csv` - Datos de anchura del río (sintéticos)
+- `data/models/caudal_predictor/` - Directorio para modelos
+
+**Arquitectura LSTM:**
+```
+Entrada (sequence_length x n_features)
+  ↓
+LSTM Layer 1 (64 units, return_sequences=True)
+  ↓
+BatchNormalization
+  ↓
+Dropout (0.2)
+  ↓
+LSTM Layer 2 (64 units)
+  ↓
+BatchNormalization
+  ↓
+Dropout (0.2)
+  ↓
+Dense (32 units, ReLU)
+  ↓
+Dense (16 units, ReLU)
+  ↓
+Dense (1 unit, Linear) → Predicción de caudal
+```
+
+**Arquitecturas disponibles:**
+- [x] `stacked` - LSTM apilado (recomendado)
+- [x] `bidirectional` - LSTM bidireccional
+- [x] `attention` - LSTM con mecanismo de atención
+- [x] `gru` - Modelo GRU alternativo
+
+**Features de entrada:**
+- [x] Caudal histórico
+- [x] Precipitación
+- [x] Anchura del río (desde Vision Agent)
+- [x] Features temporales (sin/cos del mes y día)
+
+**Preprocesamiento:**
+- [x] MinMaxScaler para normalización
+- [x] Creación de secuencias temporales
+- [x] División temporal (70% train / 15% val / 15% test)
+- [x] Manejo de valores faltantes
+
+**Métricas de validación:**
+- [x] RMSE (Root Mean Square Error)
+- [x] MAE (Mean Absolute Error)
+- [x] R² (Coefficient of Determination)
+- [x] MAPE (Mean Absolute Percentage Error)
+- [x] NSE (Nash-Sutcliffe Efficiency)
+- [x] P-Bias (Percent Bias)
+- [x] KGE (Kling-Gupta Efficiency)
+
+**Uso:**
+```bash
+# Entrenar modelo
+python src/python/ml/caudal_predictor.py --epochs 100 --batch-size 32
+
+# Validar modelo
+python src/python/ml/validation.py
+
+# Validación cruzada
+python src/python/ml/validation.py --cross-validate --n-splits 5
+```
 
 ---
 
@@ -75,6 +153,17 @@
 **Directorios creados:**
 ```
 data/
+├── historical/
+│   ├── streamflow.csv      # Caudal histórico (1969-2023)
+│   ├── precipitation.csv   # Precipitación histórica
+│   └── river_width.csv    # Anchura del río
+├── models/
+│   └── caudal_predictor/
+│       ├── caudal_lstm_model.keras
+│       ├── model_config.json
+│       ├── scaler.save
+│       ├── training_results.json
+│       └── validation_results.json
 ├── raw/satelite/
 │   ├── landsat/{mss,tm,oli}/
 │   ├── sentinel2/{L1C,L2A}/
@@ -82,37 +171,30 @@ data/
 └── output/
 ```
 
-**Catálogo de imágenes:**
-- Schema definido con 15 columnas
-- Campos: scene_id, sensor, fecha, nubosidad, ruta local, asset_id, checksums
-
-**Pendiente:**
-- [ ] Poblar con datos históricos reales
-- [ ] Implementar sistema de versioning de datos
-
 ---
 
 ## Módulo: Modelo de Predicción (ML)
 
 ### Estado: 🔄 En Desarrollo
 
-**Archivos existentes:**
-- `src/python/ml/train_pipeline.py`
-- `src/python/ml/water_extension_model.py`
-- `src/python/ml/skyfusion_predictor.py`
-- `src/python/ml/data_generator.py`
-- `src/python/ml/run_inference.py`
+**Modelos implementados:**
+- ✅ `caudal_predictor.py` - LSTM para predicción de caudales
+- ✅ `validation.py` - Métricas de regresión completas
+- 🔄 `train_pipeline.py` - Pipeline de extensión de agua
+- 🔄 `water_extension_model.py` - U-Net para máscaras de agua
 
-**Funcionalidades existentes:**
-- [x] Modelo de extensión de agua (U-Net)
-- [x] Pipeline de entrenamiento
+**Funcionalidades:**
+- [x] Modelo LSTM para caudales
+- [x] Pipeline de entrenamiento completo
 - [x] Generador de datos sintéticos
-- [x] Inferencia
+- [x] Sistema de validación con múltiples métricas
+- [x] Guardado/carga de modelos y scalers
 
 **Pendiente:**
 - [ ] Entrenamiento con datos reales de la cuenca Combeima
-- [ ] Integración con preprocessor para datos de entrada
+- [ ] Integración con preprocessor (datos de Vision Agent)
 - [ ] API de predicción en tiempo real
+- [ ] Optimización de hiperparámetros
 
 ---
 
@@ -123,6 +205,7 @@ data/
 **Documentos creados:**
 - [x] `README.md` - Principal
 - [x] `VERSIONS.md` - Matriz de versiones
+- [x] `PROJECT_STATUS.md` - Estado del proyecto (este archivo)
 - [x] `SKYFUSION_ANALYTICS_Documentacion_Tecnica.md`
 - [x] `AGENTS_STRUCTURE.md`
 
@@ -130,6 +213,7 @@ data/
 - [ ] Guía de instalación detallada
 - [ ] Documentación de API
 - [ ] Tutorial de uso del preprocessor
+- [ ] Tutorial de uso del caudal predictor
 
 ---
 
@@ -149,30 +233,39 @@ data/
 
 3. **[ ] Integrar datos satelitales con modelo ML**
    - Conectar salida del preprocessor con entrada del modelo
-   - Implementar pipeline de preprocesamiento de imágenes
+   - Usar anchura del río del Vision Agent
+
+4. **[ ] Entrenar modelo LSTM con datos reales**
+   - Reemplazar datos sintéticos con datos históricos reales
+   - Validar con métricas de regresión
 
 ### Media Prioridad
 
-4. **[ ] Implementar descarga directa a sistema local**
+5. **[ ] Implementar descarga directa a sistema local**
    - Modificar preprocessor para descarga a `data/raw/satelite/`
    - Eliminar dependencia de Google Drive
 
-5. **[ ] Configurar CI/CD**
+6. **[ ] Configurar CI/CD**
    - GitHub Actions para tests
    - Workflow de despliegue
 
-6. **[ ] Dashboard de monitoreo**
+7. **[ ] Dashboard de monitoreo**
    - Visualizar estado de procesamiento
    - Mostrar métricas de calidad de datos
 
+8. **[ ] Optimización de hiperparámetros LSTM**
+   - Grid search para sequence_length
+   - Número de unidades LSTM
+   - Learning rate
+
 ### Baja Prioridad
 
-7. **[ ] Optimización de almacenamiento**
+9. **[ ] Optimización de almacenamiento**
    - Compresión de GeoTIFFs
    - Sistema de archivos distribuidos
 
-8. **[ ] Alertas de nubosidad**
-   - Notificaciones cuando haya imágenes de baja nubosidad
+10. **[ ] Alertas de nubosidad**
+    - Notificaciones cuando haya imágenes de baja nubosidad
 
 ---
 
@@ -190,14 +283,24 @@ data/
 ## Próximos Pasos Inmediatos
 
 1. ✅ ~~Crear estructura .devcontainer~~ (Completado)
-2. ✅ ~~Actualizar README~~ (Completado)
-3. ⏳ Configurar credenciales GEE (Pendiente)
-4. ⏳ Ejecutar primera descarga de prueba (Pendiente)
-5. ⏳ Integrar con pipeline ML (Pendiente)
+2. ✅ ~~Desarrollar caudal_predictor.py~~ (Completado)
+3. ✅ ~~Desarrollar validation.py~~ (Completado)
+4. ✅ ~~Actualizar README~~ (Completado)
+5. ⏳ Configurar credenciales GEE (Pendiente)
+6. ⏳ Entrenar modelo LSTM con datos sintéticos (Prueba)
+7. ⏳ Integrar con Vision Agent (Pendiente)
 
 ---
 
 ## Notas de Versión
+
+### v0.2.0 (2026-04-16)
+- Implementación del modelo LSTM para predicción de caudales
+- Script de validación con métricas RMSE, MAE, R², NSE, KGE
+- Datos sintéticos de demostración (1969-2023)
+- Múltiples arquitecturas LSTM (stacked, bidirectional, attention, GRU)
+- Preprocesamiento con MinMaxScaler
+- Sistema de guardado/carga de modelos
 
 ### v0.1.0 (2026-04-16)
 - Implementación inicial del preprocessor GEE

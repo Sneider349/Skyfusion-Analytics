@@ -1,0 +1,74 @@
+# Skyfusion Analytics - Requirements Principal
+# ==============================================
+# VERSIONES FIJADAS PARA CONSISTENCIA EN TODOS LOS ENTORNOS
+# Usar con: pip install -r requirements.txt
+# Compatible con: Python 3.10, GDAL 3.6.2, Rasterio 1.3.8
+
+# ==============================================
+# VERSIONES FIJADAS - NO USAR >= o <=
+# ==============================================
+GDAL==3.6.2
+Rasterio==1.3.8
+
+# ==============================================
+# PROCESAMIENTO GEOMATICO
+# ==============================================
+geopandas==0.14.0
+shapely==2.0.2
+pyproj==3.6.1
+folium==0.15.1
+contextily==1.4.0
+scipy==1.11.4
+
+# ==============================================
+# MACHINE LEARNING
+# ==============================================
+tensorflow==2.15.0
+numpy==1.24.3
+pandas==2.1.4
+scikit-learn==1.3.2
+
+# ==============================================
+# PROCESAMIENTO DE IMAGENES
+# ==============================================
+opencv-python==4.8.1.78
+Pillow==10.1.0
+imageio==2.31.5
+scikit-image==0.22.0
+
+# ==============================================
+# GOOGLE EARTH ENGINE
+# ==============================================
+earthengine-api==0.1.374
+
+# ==============================================
+# DATOS Y UTILIDADES
+# ==============================================
+tqdm==4.66.1
+PyYAML==6.0.1
+python-dotenv==1.0.0
+h5py==3.10.0
+requests==2.31.0
+aiohttp==3.9.1
+
+# ==============================================
+# MENSAJERIA
+# ==============================================
+pika==1.3.2
+redis==5.0.1
+
+# ==============================================
+# TESTING
+# ==============================================
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+
+# ==============================================
+# NOTEBOOKS Y VISUALIZACION
+# ==============================================
+jupyter==1.0.0
+ipykernel==6.26.0
+matplotlib==3.8.2
+seaborn==0.13.0
+plotly==5.18.0

@@ -1,14 +1,33 @@
 """
 Módulo de procesamiento de índices ambientales
 Skyfusion Analytics - Pipeline NDVI/NDWI
+=========================================
+Incluye integración con procesamiento morfológico para clasificación
+y detección de cambios avanzados.
+
+Autor: Skyfusion Analytics Team
+Fecha: 2026
 """
 
 import numpy as np
 import cv2
 from pathlib import Path
-from typing import Tuple, Optional, Dict, Any
+from typing import Tuple, Optional, Dict, Any, List
 import json
 from datetime import datetime
+
+# Importar procesamiento morfológico
+try:
+    from morphological_processor import (
+        MorphologicalProcessor,
+        MorphologicalKernelType,
+        MorphologicalOperation,
+        create_test_image as create_morph_test_image
+    )
+    MORPHOLOGICAL_AVAILABLE = True
+except ImportError:
+    MORPHOLOGICAL_AVAILABLE = False
+    print("Advertencia: Procesamiento morfológico no disponible")
 
 
 class EnvironmentalIndexProcessor:
@@ -233,6 +252,189 @@ class EnvironmentalIndexProcessor:
             'percentile_25': float(np.percentile(index, 25)),
             'percentile_75': float(np.percentile(index, 75))
         }
+
+    # =========================================================================
+    # INTEGRACIÓN CON PROCESAMIENTO MORFOLÓGICO
+    # =========================================================================
+    
+    def apply_morphological_smoothing(
+        self,
+        index: np.ndarray,
+        kernel_size: int = 5,
+        operation: str = 'close'
+    ) -> np.ndarray:
+        """
+        Aplica suavizado morfológico a un índice.
+        
+        Args:
+            index: Índice a suavizar
+            kernel_size: Tamaño del kernel
+            operation: Operación ('close', 'open', 'both')
+            
+        Returns:
+            Índice suavizado
+        """
+        if not MORPHOLOGICAL_AVAILABLE:
+            print("Advertencia: Morfología no disponible, retornando índice original")
+            return index
+        
+        proc = MorphologicalProcessor()
+        
+        # Convertir a uint8 para procesamiento morfológico
+        normalized = ((index + 1) / 2 * 255).astype(np.uint8)
+        
+        if operation == 'close':
+            return proc.close(normalized, kernel_size)
+        elif operation == 'open':
+            return proc.open(normalized, kernel_size)
+        elif operation == 'both':
+            closed = proc.close(normalized, kernel_size)
+            return proc.open(closed, kernel_size)
+        else:
+            return normalized
+    
+    def detect_water_bodies_morphological(
+        self,
+        ndwi: np.ndarray,
+        threshold: float = 0.0,
+        kernel_size: int = 7
+    ) -> Dict[str, Any]:
+        """
+        Detecta cuerpos de agua usando procesamiento morfológico avanzado.
+        
+        Args:
+            ndwi: Índice NDWI
+            threshold: Umbral de detección
+            kernel_size: Tamaño del kernel
+            
+        Returns:
+            Diccionario con resultados de detección
+        """
+        if not MORPHOLOGICAL_AVAILABLE:
+            return {'error': 'Morfología no disponible'}
+        
+        proc = MorphologicalProcessor()
+        
+        # Binarizar NDWI
+        binary = (ndwi > threshold).astype(np.uint8) * 255
+        
+        # Aplicar cierre para conectar cuerpos de agua fragmentados
+        closed = proc.close(binary, kernel_size)
+        
+        # Aplicar apertura para eliminar noise
+        opened = proc.open(closed, 3)
+        
+        # Extraer características
+        features = proc.extract_features(opened)
+        
+        # Contar cuerpos de agua
+        num_labels, labels = cv2.connectedComponents(opened).focus()
+        
+        # Calcular áreas
+        areas = []
+        for label in range(1, num_labels):
+            area = np.sum(labels == label)
+            areas.append(float(area))
+        
+        return {
+            'num_bodies': num_labels - 1,
+            'total_water_area': float(np.sum(opened > 0)),
+            'areas': areas,
+            'largest_body': max(areas) if areas else 0,
+            'features': features.to_dict() if features.area > 0 else {}
+        }
+    
+    def detect_vegetation_change_morphological(
+        self,
+        ndvi_before: np.ndarray,
+        ndvi_after: np.ndarray,
+        threshold: float = 0.1
+    ) -> Dict[str, Any]:
+        """
+        Detecta cambios en vegetación usando procesamiento morfológico.
+        
+        Args:
+            ndvi_before: NDVI antes
+            ndvi_after: NDVI después
+            threshold: Umbral de cambio
+            
+        Returns:
+            Diccionario con cambios detectados
+        """
+        if not MORPHOLOGICAL_AVAILABLE:
+            return {'error': 'Morfología no disponible'}
+        
+        proc = MorphologicalProcessor()
+        
+        # Calcular diferencia
+        diff = ndvi_after - ndvi_before
+        
+        # Detectar cambios positivos (aumento de vegetación)
+        positive_change = (diff > threshold).astype(np.uint8) * 255
+        
+        # Detectar cambios negativos (pérdida de vegetación)
+        negative_change = (diff < -threshold).astype(np.uint8) * 255
+        
+        # Aplicar procesamiento morfológico para reducir ruido
+        positive_processed = proc.open(positive_change, 5)
+        negative_processed = proc.open(negative_change, 5)
+        
+        # Extraer características
+        pos_features = proc.extract_features(positive_processed)
+        neg_features = proc.extract_features(negative_processed)
+        
+        return {
+            'vegetation_gain': float(np.sum(positive_processed > 0)),
+            'vegetation_loss': float(np.sum(negative_processed > 0)),
+            'net_change': float(np.sum(positive_processed > 0) - np.sum(negative_processed > 0)),
+            'gain_features': pos_features.to_dict() if pos_features.area > 0 else {},
+            'loss_features': neg_features.to_dict() if neg_features.area > 0 else {}
+        }
+    
+    def extract_morphological_features_for_classification(
+        self,
+        index: np.ndarray,
+        region_mask: np.ndarray = None
+    ) -> Dict[str, float]:
+        """
+        Extrae características morfológicas para clasificación.
+        
+        Args:
+            index: Índice ambiental
+            region_mask: Máscara de región (opcional)
+            
+        Returns:
+            Diccionario de características
+        """
+        if not MORPHOLOGICAL_AVAILABLE:
+            return {'error': 'Morfología no disponible'}
+        
+        proc = MorphologicalProcessor()
+        features = proc.extract_features(index, region_mask)
+        return features.to_dict()
+    
+    def create_morphological_profile(
+        self,
+        index: np.ndarray,
+        base_kernel_size: int = 3,
+        num_scales: int = 5
+    ) -> Dict[str, List[float]]:
+        """
+        Crea perfil morfológico multi-escala.
+        
+        Args:
+            index: Índice ambiental
+            base_kernel_size: Tamaño base del kernel
+            num_scales: Número de escalas
+            
+        Returns:
+            Perfil morfológico
+        """
+        if not MORPHOLOGICAL_AVAILABLE:
+            return {'error': 'Morfología no disponible'}
+        
+        proc = MorphologicalProcessor()
+        return proc.extract_multi_scale_features(index)
 
 
 def create_sample_data(width: int = 512, height: int = 512) -> Dict[str, np.ndarray]:

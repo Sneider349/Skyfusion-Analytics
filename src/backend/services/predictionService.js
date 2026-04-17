@@ -5,6 +5,92 @@
 const { getDriver } = require('../config/neo4j');
 const { logger } = require('../config/logger');
 
+async function getPredictions(catchmentId, options = {}) {
+    const {
+        startDate = null,
+        endDate = null,
+        modelType = null,
+        horizon = null,
+        limit = 100
+    } = options;
+
+    const driver = getDriver();
+    const session = driver.session({ database: 'neo4j' });
+
+    try {
+        let query = `
+            MATCH (p:Prediction)-[:FOR_CATCHMENT]->(c:Catchment {id: $catchmentId})
+            WHERE 1=1
+        `;
+        const params = { catchmentId, limit };
+
+        if (startDate) {
+            query += ` AND p.timestamp >= datetime($startDate)`;
+            params.startDate = startDate;
+        }
+        if (endDate) {
+            query += ` AND p.timestamp <= datetime($endDate)`;
+            params.endDate = endDate;
+        }
+        if (horizon) {
+            query += ` AND p.horizon_days = $horizon`;
+            params.horizon = horizon;
+        }
+        if (modelType) {
+            query += ` AND p.model_type = $modelType`;
+            params.modelType = modelType;
+        }
+
+        query += ` RETURN p ORDER BY p.timestamp DESC LIMIT $limit`;
+
+        const result = await session.run(query, params);
+
+        const predictions = result.records.map(record => {
+            const p = record.get('p');
+            return {
+                timestamp: p.properties.timestamp?.toString() || new Date().toISOString(),
+                horizon_days: p.properties.horizon_days,
+                variable: p.properties.variable || 'caudal',
+                value: p.properties.value,
+                confidence: p.properties.confidence || 0.85,
+                model_type: p.properties.model_type || 'default'
+            };
+        });
+
+        return predictions;
+    } catch (error) {
+        logger.error('Error getting predictions:', error);
+        throw error;
+    } finally {
+        await session.close();
+    }
+}
+
+async function getCatchmentMetadata(catchmentId) {
+    const driver = getDriver();
+    const session = driver.session({ database: 'neo4j' });
+
+    try {
+        const result = await session.run(`
+            MATCH (c:Catchment {id: $catchmentId})
+            RETURN c.id as id, c.name as name, c.location as location
+        `, { catchmentId });
+
+        if (result.records.length === 0) {
+            return null;
+        }
+
+        const record = result.records[0];
+        return {
+            id: record.get('id'),
+            name: record.get('name'),
+            location: record.get('location')
+        };
+    } finally {
+        await session.close();
+    }
+}
+
 async function startPredictionJob(io) {
     try {
         logger.info('Starting prediction job');
@@ -88,4 +174,4 @@ async function generatePredictions(catchmentId, io) {
     return predictions;
 }
 
-module.exports = { startPredictionJob, generatePredictions };
+module.exports = { startPredictionJob, generatePredictions, getPredictions, getCatchmentMetadata };

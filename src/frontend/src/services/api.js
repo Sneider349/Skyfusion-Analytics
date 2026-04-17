@@ -127,6 +127,24 @@ export const fetchPredictions = async (catchmentId, horizon = 7) => {
   }
 };
 
+export const fetchPredictionsHistory = async (catchmentId, options = {}) => {
+  try {
+    const params = new URLSearchParams();
+    
+    if (options.startDate) params.append('startDate', options.startDate);
+    if (options.endDate) params.append('endDate', options.endDate);
+    if (options.modelType) params.append('modelType', options.modelType);
+    if (options.horizon) params.append('horizon', options.horizon);
+    if (options.limit) params.append('limit', options.limit);
+
+    const data = await api.get(`/predictions/${catchmentId}/history?${params.toString()}`);
+    return data;
+  } catch (error) {
+    console.error('Error fetching predictions history:', error);
+    throw error;
+  }
+};
+
 export const fetchNarrative = async (catchmentId) => {
   try {
     const data = await api.get(`/demo/narrative/${catchmentId}`);

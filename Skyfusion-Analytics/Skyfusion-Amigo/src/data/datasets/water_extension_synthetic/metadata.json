@@ -1,0 +1,515 @@
+{
+  "created_at": "2026-04-14T17:11:54.593361",
+  "catchment": "Combeima",
+  "config": {
+    "sequence_length": 10,
+    "horizons": [
+      7,
+      14,
+      30
+    ],
+    "patch_size": 64
+  },
+  "metadata": [
+    {
+      "sample_id": 0,
+      "base_ndwi": 0.06217808319315371,
+      "has_water": true
+    },
+    {
+      "sample_id": 1,
+      "base_ndwi": -0.046723342771333,
+      "has_water": false
+    },
+    {
+      "sample_id": 2,
+      "base_ndwi": 0.38471129214312055,
+      "has_water": true
+    },
+    {
+      "sample_id": 3,
+      "base_ndwi": 0.42749316908690355,
+      "has_water": true
+    },
+    {
+      "sample_id": 4,
+      "base_ndwi": 0.36434598629630816,
+      "has_water": true
+    },
+    {
+      "sample_id": 5,
+      "base_ndwi": 0.10684453517257059,
+      "has_water": true
+    },
+    {
+      "sample_id": 6,
+      "base_ndwi": 0.49499025287510584,
+      "has_water": true
+    },
+    {
+      "sample_id": 7,
+      "base_ndwi": 0.20785251934979476,
+      "has_water": true
+    },
+    {
+      "sample_id": 8,
+      "base_ndwi": 0.2885451237170621,
+      "has_water": true
+    },
+    {
+      "sample_id": 9,
+      "base_ndwi": -0.18314074280178072,
+      "has_water": false
+    },
+    {
+      "sample_id": 10,
+      "base_ndwi": -0.16111426120555816,
+      "has_water": false
+    },
+    {
+      "sample_id": 11,
+      "base_ndwi": 0.4995818088779022,
+      "has_water": true
+    },
+    {
+      "sample_id": 12,
+      "base_ndwi": 0.20931600897185737,
+      "has_water": true
+    },
+    {
+      "sample_id": 13,
+      "base_ndwi": 0.43713794325555516,
+      "has_water": true
+    },
+    {
+      "sample_id": 14,
+      "base_ndwi": -0.0775063312633634,
+      "has_water": false
+    },
+    {
+      "sample_id": 15,
+      "base_ndwi": 0.04382042008212525,
+      "has_water": true
+    },
+    {
+      "sample_id": 16,
+      "base_ndwi": 0.14217356791342628,
+      "has_water": true
+    },
+    {
+      "sample_id": 17,
+      "base_ndwi": -0.08597442916622058,
+      "has_water": false
+    },
+    {
+      "sample_id": 18,
+      "base_ndwi": 0.40577144267642934,
+      "has_water": true
+    },
+    {
+      "sample_id": 19,
+      "base_ndwi": 0.3850403564264124,
+      "has_water": true
+    },
+    {
+      "sample_id": 20,
+      "base_ndwi": 0.3346535489544304,
+      "has_water": true
+    },
+    {
+      "sample_id": 21,
+      "base_ndwi": 0.1155615631138181,
+      "has_water": true
+    },
+    {
+      "sample_id": 22,
+      "base_ndwi": -0.19739160248756346,
+      "has_water": false
+    },
+    {
+      "sample_id": 23,
+      "base_ndwi": -0.002547308973726403,
+      "has_water": false
+    },
+    {
+      "sample_id": 24,
+      "base_ndwi": -0.07528622154788892,
+      "has_water": false
+    },
+    {
+      "sample_id": 25,
+      "base_ndwi": 0.2834990898104214,
+      "has_water": true
+    },
+    {
+      "sample_id": 26,
+      "base_ndwi": 0.23981286104598487,
+      "has_water": true
+    },
+    {
+      "sample_id": 27,
+      "base_ndwi": -0.13294119905283097,
+      "has_water": false
+    },
+    {
+      "sample_id": 28,
+      "base_ndwi": 0.11460556933317229,
+      "has_water": true
+    },
+    {
+      "sample_id": 29,
+      "base_ndwi": 0.24287294743221288,
+      "has_water": true
+    },
+    {
+      "sample_id": 30,
+      "base_ndwi": -0.15641173333514105,
+      "has_water": false
+    },
+    {
+      "sample_id": 31,
+      "base_ndwi": 0.014280470758128716,
+      "has_water": true
+    },
+    {
+      "sample_id": 32,
+      "base_ndwi": 0.22669607641206668,
+      "has_water": true
+    },
+    {
+      "sample_id": 33,
+      "base_ndwi": 0.3703898971453861,
+      "has_water": true
+    },
+    {
+      "sample_id": 34,
+      "base_ndwi": 0.2599737430779157,
+      "has_water": true
+    },
+    {
+      "sample_id": 35,
+      "base_ndwi": 0.2851534927151873,
+      "has_water": true
+    },
+    {
+      "sample_id": 36,
+      "base_ndwi": 0.048917396997291696,
+      "has_water": true
+    },
+    {
+      "sample_id": 37,
+      "base_ndwi": 0.35690237042236556,
+      "has_water": true
+    },
+    {
+      "sample_id": 38,
+      "base_ndwi": 0.10025289898157186,
+      "has_water": true
+    },
+    {
+      "sample_id": 39,
+      "base_ndwi": 0.16007811073230466,
+      "has_water": true
+    },
+    {
+      "sample_id": 40,
+      "base_ndwi": 0.10542561452138954,
+      "has_water": true
+    },
+    {
+      "sample_id": 41,
+      "base_ndwi": -0.17762062696919576,
+      "has_water": false
+    },
+    {
+      "sample_id": 42,
+      "base_ndwi": 0.4120927351041031,
+      "has_water": true
+    },
+    {
+      "sample_id": 43,
+      "base_ndwi": -0.12195799627857391,
+      "has_water": false
+    },
+    {
+      "sample_id": 44,
+      "base_ndwi": 0.10829396763141896,
+      "has_water": true
+    },
+    {
+      "sample_id": 45,
+      "base_ndwi": 0.014369000200518761,
+      "has_water": true
+    },
+    {
+      "sample_id": 46,
+      "base_ndwi": -0.13199496115056641,
+      "has_water": false
+    },
+    {
+      "sample_id": 47,
+      "base_ndwi": -0.10581780932379209,
+      "has_water": false
+    },
+    {
+      "sample_id": 48,
+      "base_ndwi": -0.0343480289596681,
+      "has_water": false
+    },
+    {
+      "sample_id": 49,
+      "base_ndwi": -0.16278912256528716,
+      "has_water": false
+    },
+    {
+      "sample_id": 50,
+      "base_ndwi": -0.13340890888856125,
+      "has_water": false
+    },
+    {
+      "sample_id": 51,
+      "base_ndwi": 0.46556151619978187,
+      "has_water": true
+    },
+    {
+      "sample_id": 52,
+      "base_ndwi": 0.40861401119934065,
+      "has_water": true
+    },
+    {
+      "sample_id": 53,
+      "base_ndwi": 0.4730479788670284,
+      "has_water": true
+    },
+    {
+      "sample_id": 54,
+      "base_ndwi": -0.05016225745828676,
+      "has_water": false
+    },
+    {
+      "sample_id": 55,
+      "base_ndwi": 0.29795782520789815,
+      "has_water": true
+    },
+    {
+      "sample_id": 56,
+      "base_ndwi": 0.06827102227783932,
+      "has_water": true
+    },
+    {
+      "sample_id": 57,
+      "base_ndwi": 0.16411642173379026,
+      "has_water": true
+    },
+    {
+      "sample_id": 58,
+      "base_ndwi": 0.1128690707651232,
+      "has_water": true
+    },
+    {
+      "sample_id": 59,
+      "base_ndwi": 0.0324343526200393,
+      "has_water": true
+    },
+    {
+      "sample_id": 60,
+      "base_ndwi": -0.0401364594195171,
+      "has_water": false
+    },
+    {
+      "sample_id": 61,
+      "base_ndwi": 0.20200891036851348,
+      "has_water": true
+    },
+    {
+      "sample_id": 62,
+      "base_ndwi": 0.08902305103129571,
+      "has_water": true
+    },
+    {
+      "sample_id": 63,
+      "base_ndwi": -0.19608135213842467,
+      "has_water": false
+    },
+    {
+      "sample_id": 64,
+      "base_ndwi": -0.01566615494334661,
+      "has_water": false
+    },
+    {
+      "sample_id": 65,
+      "base_ndwi": -0.02915302113650453,
+      "has_water": false
+    },
+    {
+      "sample_id": 66,
+      "base_ndwi": -0.02957443036084295,
+      "has_water": false
+    },
+    {
+      "sample_id": 67,
+      "base_ndwi": 0.4733273627884819,
+      "has_water": true
+    },
+    {
+      "sample_id": 68,
+      "base_ndwi": 0.2929404370508105,
+      "has_water": true
+    },
+    {
+      "sample_id": 69,
+      "base_ndwi": 0.24424183832986462,
+      "has_water": true
+    },
+    {
+      "sample_id": 70,
+      "base_ndwi": -0.09673845843439885,
+      "has_water": false
+    },
+    {
+      "sample_id": 71,
+      "base_ndwi": 0.46753219779365046,
+      "has_water": true
+    },
+    {
+      "sample_id": 72,
+      "base_ndwi": 0.3145629928514045,
+      "has_water": true
+    },
+    {
+      "sample_id": 73,
+      "base_ndwi": 0.23518334153578452,
+      "has_water": true
+    },
+    {
+      "sample_id": 74,
+      "base_ndwi": 0.15753870003025383,
+      "has_water": true
+    },
+    {
+      "sample_id": 75,
+      "base_ndwi": 0.30120151957632996,
+      "has_water": true
+    },
+    {
+      "sample_id": 76,
+      "base_ndwi": 0.10593373429647313,
+      "has_water": true
+    },
+    {
+      "sample_id": 77,
+      "base_ndwi": -0.10945171565072954,
+      "has_water": false
+    },
+    {
+      "sample_id": 78,
+      "base_ndwi": 0.2773860083333204,
+      "has_water": true
+    },
+    {
+      "sample_id": 79,
+      "base_ndwi": 0.04305099102858018,
+      "has_water": true
+    },
+    {
+      "sample_id": 80,
+      "base_ndwi": -0.0877882186482435,
+      "has_water": false
+    },
+    {
+      "sample_id": 81,
+      "base_ndwi": 0.0906758320703352,
+      "has_water": true
+    },
+    {
+      "sample_id": 82,
+      "base_ndwi": 0.01149253361259897,
+      "has_water": true
+    },
+    {
+      "sample_id": 83,
+      "base_ndwi": 0.22131577257296314,
+      "has_water": true
+    },
+    {
+      "sample_id": 84,
+      "base_ndwi": 0.28778515747312383,
+      "has_water": true
+    },
+    {
+      "sample_id": 85,
+      "base_ndwi": -0.06426552342390879,
+      "has_water": false
+    },
+    {
+      "sample_id": 86,
+      "base_ndwi": 0.0517429285890445,
+      "has_water": true
+    },
+    {
+      "sample_id": 87,
+      "base_ndwi": 0.3259554569791658,
+      "has_water": true
+    },
+    {
+      "sample_id": 88,
+      "base_ndwi": -0.15733996606918546,
+      "has_water": false
+    },
+    {
+      "sample_id": 89,
+      "base_ndwi": 0.019140427201710164,
+      "has_water": true
+    },
+    {
+      "sample_id": 90,
+      "base_ndwi": 0.4625716047330119,
+      "has_water": true
+    },
+    {
+      "sample_id": 91,
+      "base_ndwi": 0.35325130436413293,
+      "has_water": true
+    },
+    {
+      "sample_id": 92,
+      "base_ndwi": 0.03764089636246348,
+      "has_water": true
+    },
+    {
+      "sample_id": 93,
+      "base_ndwi": 0.34319808630140575,
+      "has_water": true
+    },
+    {
+      "sample_id": 94,
+      "base_ndwi": 0.36948670258292643,
+      "has_water": true
+    },
+    {
+      "sample_id": 95,
+      "base_ndwi": 0.2284991663508245,
+      "has_water": true
+    },
+    {
+      "sample_id": 96,
+      "base_ndwi": -0.11502825536878748,
+      "has_water": false
+    },
+    {
+      "sample_id": 97,
+      "base_ndwi": -0.14165185601532165,
+      "has_water": false
+    },
+    {
+      "sample_id": 98,
+      "base_ndwi": 0.19312466029814085,
+      "has_water": true
+    },
+    {
+      "sample_id": 99,
+      "base_ndwi": -0.06308291550398645,
+      "has_water": false
+    }
+  ]
+}

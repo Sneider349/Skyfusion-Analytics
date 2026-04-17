@@ -1,0 +1,19 @@
+{
+  "sequence_length": 10,
+  "patch_size": 64,
+  "n_satellite_features": 4,
+  "n_climate_features": 3,
+  "n_static_features": 5,
+  "horizons": [
+    7
+  ],
+  "cnn_filters": [
+    32,
+    64,
+    128
+  ],
+  "lstm_units": 64,
+  "attention_heads": 4,
+  "dropout_rate": 0.3,
+  "saved_at": "2026-04-14T17:12:19.307377"
+}

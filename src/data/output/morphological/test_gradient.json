@@ -1,0 +1,10 @@
+{
+  "timestamp": "2026-04-15T21:40:01.750859",
+  "shape": [
+    512,
+    512
+  ],
+  "dtype": "uint8",
+  "type": "gradient",
+  "kernel_size": 5
+}

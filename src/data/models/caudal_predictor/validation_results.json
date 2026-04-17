@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-16T22:05:15.262986",
+  "model_path": "src\\data\\models\\caudal_predictor\\caudal_lstm_model.keras",
+  "metrics": {
+    "rmse": 5.449537250573249,
+    "mae": 4.355184197489551,
+    "r2": 0.869687650794658,
+    "mape": 7.856812004803711,
+    "nse": 0.869687650794658,
+    "pbias": -1.5913751541633168,
+    "kge": 0.8307344785560092
+  },
+  "n_samples": 3008,
+  "config": null
+}

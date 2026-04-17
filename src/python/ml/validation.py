@@ -127,6 +127,8 @@ class ValidationPipeline:
         logger.info("Cargando modelo y escalador...")
         
         model_path = self.model_dir / 'caudal_lstm_model.keras'
+        if not model_path.exists():
+            model_path = self.model_dir / 'best_model.keras'
         scaler_path = self.model_dir / 'scaler.save'
         config_path = self.model_dir / 'model_config.json'
         

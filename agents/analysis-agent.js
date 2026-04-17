@@ -30,7 +30,11 @@ class AnalysisAgent extends EventEmitter {
   async initialize(config = {}) {
     this.config = { ...this.config, ...config };
     this.status = 'ready';
-    await neo4jService.connect();
+    try {
+      await neo4jService.connect();
+    } catch (error) {
+      console.warn('[AnalysisAgent] Neo4j connection failed, continuing in degraded mode:', error.message);
+    }
     console.log('[AnalysisAgent] Initialized with config:', this.config);
   }
 
@@ -169,7 +173,11 @@ class AnalysisAgent extends EventEmitter {
       }
     };
 
-    await neo4jService.saveAnalysisResult(metadata);
+    try {
+      await neo4jService.saveAnalysisResult(metadata);
+    } catch (error) {
+      console.warn('[AnalysisAgent] Failed to save analysis metadata to Neo4j (fallback mode):', error.message);
+    }
   }
 
   updateStudyArea(newStudyArea) {

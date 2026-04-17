@@ -1,0 +1,24 @@
+{
+  "area_m2": 3817786.8664,
+  "area_km2": 3.8178,
+  "area_ha": 381.7787,
+  "perimeter_m": 7327.9959,
+  "perimeter_km": 7.328,
+  "compactness_index": 0.893411,
+  "circularity_index": 0.893411,
+  "rectangularity_index": 0.770624,
+  "elongation_index": 1.0,
+  "solidity": 0.993744,
+  "eccentricity": 0,
+  "bounding_box_m": [
+    2225.7912802230567,
+    2225.7912802230567
+  ],
+  "centroid_m": [
+    2768.3971147052944,
+    2768.3971147052944
+  ],
+  "crs_used": "EPSG:32618",
+  "scale_factor_m_per_px": 11.073588458821177,
+  "source_bbox": null
+}

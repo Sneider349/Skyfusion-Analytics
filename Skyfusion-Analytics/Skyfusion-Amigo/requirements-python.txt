@@ -1,0 +1,22 @@
+# Requisitos de Python para Skyfusion Analytics - Módulo de Procesamiento
+# ==========================================================================
+
+# Dependencias core para procesamiento geoespacial
+numpy>=1.21.0
+opencv-python>=4.5.0
+scipy>=1.7.0
+
+# Dependencias para transformación de proyecciones CRS
+pyproj>=3.0.0
+
+# Dependencias opcionales
+# rasterio>=1.2.0  # Para procesamiento de raster
+# geopandas>=0.10.0  # Para datos vectoriales
+# shapely>=1.8.0  # Para operaciones geométricas
+
+# Testing
+pytest>=7.0.0
+pytest-cov>=3.0.0
+
+# Utilities
+tqdm>=4.62.0  # Barra de progreso

@@ -1,0 +1,16 @@
+node_modules/
+.env
+*.log
+logs/
+.DS_Store
+dist/
+build/
+*.swp
+*.swo
+coverage/
+.idea/
+.vscode/
+neo4j_data/
+*.npz
+*.npy
+*.h5

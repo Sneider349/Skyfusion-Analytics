@@ -5,6 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const waterPredictionService = require('../services/waterPredictionService');
+const predictionService = require('../services/predictionService');
 const { authenticateToken, blockGuests, requirePermission, optionalAuth } = require('../middleware/authMiddleware');
 
 router.get('/:catchment', optionalAuth, async (req, res, next) => {
@@ -92,6 +93,66 @@ router.post('/trigger', authenticateToken, blockGuests, requirePermission('canVi
             estimated_completion: new Date(Date.now() + 60000).toISOString()
         });
     } catch (error) {
+        next(error);
+    }
+});
+
+router.get('/:catchment/history', optionalAuth, async (req, res, next) => {
+    try {
+        const { catchment } = req.params;
+        const { 
+            startDate, 
+            endDate, 
+            modelType, 
+            horizon, 
+            limit = 100 
+        } = req.query;
+
+        const catchmentMetadata = await predictionService.getCatchmentMetadata(catchment);
+        
+        if (!catchmentMetadata) {
+            return res.status(404).json({
+                success: false,
+                error: 'Cuenca no encontrada',
+                errorCode: 'CATCHMENT_NOT_FOUND'
+            });
+        }
+
+        const predictions = await predictionService.getPredictions(catchment, {
+            startDate: startDate || null,
+            endDate: endDate || null,
+            modelType: modelType || null,
+            horizon: horizon ? parseInt(horizon) : null,
+            limit: parseInt(limit)
+        });
+
+        res.json({
+            success: true,
+            predictions: predictions,
+            metadata: {
+                catchmentId: catchment,
+                catchmentName: catchmentMetadata.name,
+                catchmentLocation: catchmentMetadata.location,
+                modelUsed: predictions.length > 0 ? predictions[0].model_type : 'default',
+                generatedAt: new Date().toISOString(),
+                dataPoints: predictions.length,
+                filters: {
+                    startDate: startDate || null,
+                    endDate: endDate || null,
+                    modelType: modelType || null,
+                    horizon: horizon ? parseInt(horizon) : null
+                }
+            },
+            is_guest_access: req.user?.role === 'guest'
+        });
+    } catch (error) {
+        if (error.message.includes('Connection')) {
+            return res.status(503).json({
+                success: false,
+                error: 'Servicio de base de datos no disponible',
+                errorCode: 'DB_UNAVAILABLE'
+            });
+        }
         next(error);
     }
 });

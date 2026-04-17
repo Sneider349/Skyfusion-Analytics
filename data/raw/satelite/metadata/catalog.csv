@@ -1,0 +1,1 @@
+scene_id,sensor,satellite,product_level,acquisition_date,acquisition_time,cloud_cover,bounds_min_lon,bounds_min_lat,bounds_max_lon,bounds_max_lat,local_path,gee_asset_id,gee_collection,checksum_md5,checksum_sha256,file_size_bytes,download_status,download_timestamp,downloaded_by,gee_task_id,notes

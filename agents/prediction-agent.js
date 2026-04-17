@@ -31,7 +31,11 @@ class PredictionAgent extends EventEmitter {
   async initialize(config = {}) {
     this.config = { ...this.config, ...config };
     this.status = 'ready';
-    await neo4jService.connect();
+    try {
+      await neo4jService.connect();
+    } catch (error) {
+      console.warn('[PredictionAgent] Neo4j connection failed, continuing in degraded mode:', error.message);
+    }
     console.log('[PredictionAgent] Initialized with config:', this.config);
   }
 
@@ -164,7 +168,11 @@ class PredictionAgent extends EventEmitter {
       }
     };
 
-    await neo4jService.savePrediction(predictionRecord);
+    try {
+      await neo4jService.savePrediction(predictionRecord);
+    } catch (error) {
+      console.warn('[PredictionAgent] Failed to save prediction to Neo4j (fallback mode):', error.message);
+    }
   }
 
   _calculateAlertLevel(prediction) {

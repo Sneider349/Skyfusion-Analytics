@@ -1,0 +1,23 @@
+# Resumen de Analisis del Modelo LSTM - Caudal Predictor
+Fecha: 2026-04-16 22:05:37
+
+## Resumen Ejecutivo
+
+El modelo LSTM de predicción de caudales para la cuenca del río Combeima presenta un rendimiento bueno con un R² de 0.8697, lo que indica que explica aproximadamente el 87% de la varianza en los datos de caudal observados. El RMSE de 5.45 m³/s representa un error medio cuadrático moderado que equivale aproximadamente al 10.9% del caudal medio característico de la cuenca (50 m³/s).
+
+Desde la perspectiva de aplicaciones prácticas de monitoreo hidrológico, el coeficiente de eficiencia de Nash-Sutcliffe (NSE) de 0.8697 y el Kling-Gupta Efficiency (KGE) de 0.8307 confirman que el modelo tiene capacidad adecuada para reproducir patrones de caudal, incluyendo eventos de crecida. El sesgo percentil (P-Bias) de -1.59% indica una ligera subestimación sistemática que podría calibrarse ajustando el umbral de decisión.
+
+Para mejorar el rendimiento futuro, se recomienda explorar: (1) incorporación de datos meteorológicos adicionales como evapotranspiración y humedad del suelo, (2) aumento de la longitud de secuencia para capturar patrones estacionales más largos, y (3) implementación de arquitecturas de atención (Transformer o LSTM con Attention) que permitan al modelo enfocarse en las relaciones causales más relevantes entre variables.
+
+
+## Metricas de Validacion
+
+| Metrica | Valor |
+|---------|-------|
+| RMSE | 5.4495 m3/s |
+| MAE | 4.3552 m3/s |
+| R2 | 0.8697 |
+| MAPE | 7.8568 |
+| NSE | 0.8697 |
+| PBIAS | -1.5914 |
+| KGE | 0.8307 |

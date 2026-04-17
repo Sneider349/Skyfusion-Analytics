@@ -610,6 +610,89 @@ CREATE (prediction:Prediction {
 CREATE (prediction)-[:FOR_CATCHMENT]->(c)
 ```
 
+### 6.2.1 Esquema de Resultados Morfológicos por Año
+
+```cypher
+// NODOS PARA RESULTADOS MORFOLÓGICOS ANUALES
+
+// Nodo Año: Organización temporal
+CREATE (y2025:Year {year: 2025})
+
+// Nodo Índice Morfológico: Resultados anuales
+CREATE (m:MorphologicalIndex {
+    id: randomUUID(),
+    type: 'NDVI',
+    year: 2025,
+    mean: 0.65,
+    min: 0.12,
+    max: 0.89,
+    stdDev: 0.15,
+    coverage: 95.5,
+    source: 'Sentinel-2',
+    processingDate: datetime(),
+    observations: 23,
+    trend: 'stable',
+    notes: 'Análisis completado sin anomalías'
+})
+
+// Índices para optimizar consultas
+CREATE INDEX morphological_year IF NOT EXISTS FOR (m:MorphologicalIndex) ON (m.year)
+CREATE INDEX morphological_type IF NOT EXISTS FOR (m:MorphologicalIndex) ON (m.type)
+
+// RELACIONES
+CREATE (m)-[:ANALYZED_IN]->(y2025)
+CREATE (m)-[:COMPUTED_FOR]->(c:Catchment {id: 'COMBEIMA'})
+
+// Ejemplo: Crear NDWI 2025
+CREATE (ndwi:MorphologicalIndex {
+    id: randomUUID(),
+    type: 'NDWI',
+    year: 2025,
+    mean: 0.42,
+    min: -0.15,
+    max: 0.78,
+    stdDev: 0.18,
+    coverage: 92.3,
+    source: 'Sentinel-2',
+    processingDate: datetime()
+})
+CREATE (ndwi)-[:ANALYZED_IN]->(y2025)
+CREATE (ndwi)-[:COMPUTED_FOR]->(c)
+```
+
+### 6.2.2 Consultas Morfológicas (Clean Code)
+
+```cypher
+// Obtener tendencia de NDVI por año (últimos 5 años)
+MATCH (m:MorphologicalIndex)-[:ANALYZED_IN]->(y:Year),
+      (m)-[:COMPUTED_FOR]->(c:Catchment {id: 'COMBEIMA'})
+WHERE m.type = 'NDVI' AND y.year >= 2021
+RETURN y.year, m.mean, m.stdDev, m.trend
+ORDER BY y.year
+
+// Comparar NDVI vs NDWI por año
+MATCH (m:MorphologicalIndex)-[:ANALYZED_IN]->(y:Year),
+      (m)-[:COMPUTED_FOR]->(c:Catchment {id: 'COMBEIMA'})
+WHERE y.year >= 2021
+RETURN y.year,
+       MAX(CASE WHEN m.type = 'NDVI' THEN m.mean END) as ndvi_mean,
+       MAX(CASE WHEN m.type = 'NDWI' THEN m.mean END) as ndwi_mean
+ORDER BY y.year
+
+// Obtener estadísticas anuales de un índice
+MATCH (m:MorphologicalIndex)-[:COMPUTED_FOR]->(c:Catchment {id: $catchmentId})
+WHERE m.type = $indexType
+RETURN m.year, m.mean, m.min, m.max, m.stdDev, m.trend
+ORDER BY m.year DESC
+
+// Detectar cambios significativos (stdDev > umbral)
+MATCH (m:MorphologicalIndex)-[:ANALYZED_IN]->(y:Year),
+      (m)-[:COMPUTED_FOR]->(c:Catchment)
+WHERE m.stdDev > 0.25
+RETURN c.id, m.type, y.year, m.mean, m.stdDev
+ORDER BY m.stdDev DESC
+```
+
 ### 6.3 API REST - Endpoints Principales
 
 ```
@@ -632,6 +715,13 @@ WS     /ws/sensors/{id}             → WebSocket tiempo real
 ─────────────
 GET    /api/indices/ndvi            → NDVI (parámetros: catchment, date)
 GET    /api/indices/ndwi            → NDWI (parámetros: catchment, date)
+
+MORFOLÓGICOS ANUALES:
+─────────────
+POST   /api/morphological           → Guardar resultado morfológico anual
+GET    /api/morphological/{catchment}/trend → Tendencia por año (parámetros: startYear, endYear)
+GET    /api/morphological/{catchment}/{type} → Índice por tipo (parámetros: year, type)
+GET    /api/morphological/{catchment}/comparison → Comparación NDVI vs NDWI
 
 PREDICCIONES:
 ─────────────

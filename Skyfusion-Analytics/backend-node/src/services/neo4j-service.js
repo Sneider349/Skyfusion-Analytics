@@ -245,6 +245,133 @@ class Neo4jService {
     }
   }
 
+  async saveMorphologicalYearlyResult(data) {
+    const session = this.getSession();
+    const query = `
+      MERGE (c:Catchment {id: $catchmentId})
+      MERGE (y:Year {year: $year})
+      MERGE (m:MorphologicalIndex {
+        id: randomUUID(),
+        type: $type,
+        year: $year
+      })
+      SET m.mean = $mean,
+          m.min = $min,
+          m.max = $max,
+          m.stdDev = $stdDev,
+          m.coverage = $coverage,
+          m.source = $source,
+          m.processingDate = datetime(),
+          m.validatedAt = CASE WHEN $validatedAt IS NOT NULL THEN datetime($validatedAt) ELSE NULL END,
+          m.observations = $observations,
+          m.trend = $trend,
+          m.notes = $notes
+      MERGE (m)-[:ANALYZED_IN]->(y)
+      MERGE (m)-[:COMPUTED_FOR]->(c)
+      RETURN m, y
+    `;
+
+    try {
+      const result = await session.run(query, {
+        catchmentId: data.catchmentId,
+        year: data.year,
+        type: data.type,
+        mean: data.mean,
+        min: data.min,
+        max: data.max,
+        stdDev: data.stdDev,
+        coverage: data.coverage,
+        source: data.source || 'GEE',
+        validatedAt: data.validatedAt || null,
+        observations: data.observations || null,
+        trend: data.trend || null,
+        notes: data.notes || null
+      });
+
+      console.log(`[Neo4jService] Morphological index ${data.type} for year ${data.year} saved`);
+      return {
+        morphological: result.records[0]?.get('m')?.properties,
+        year: result.records[0]?.get('y')?.properties
+      };
+    } finally {
+      await session.close();
+    }
+  }
+
+  async getMorphologicalTrendByYear(catchmentId, startYear, endYear) {
+    const session = this.getSession();
+    const query = `
+      MATCH (m:MorphologicalIndex)-[:ANALYZED_IN]->(y:Year),
+            (m)-[:COMPUTED_FOR]->(c:Catchment {id: $catchmentId})
+      WHERE y.year >= $startYear AND y.year <= $endYear
+      RETURN m.type, y.year, m.mean, m.stdDev, m.trend
+      ORDER BY m.type, y.year
+    `;
+
+    try {
+      const result = await session.run(query, {
+        catchmentId,
+        startYear,
+        endYear
+      });
+
+      return result.records.map(r => ({
+        type: r.get('m.type'),
+        year: r.get('y.year'),
+        mean: r.get('m.mean'),
+        stdDev: r.get('m.stdDev'),
+        trend: r.get('m.trend')
+      }));
+    } finally {
+      await session.close();
+    }
+  }
+
+  async getMorphologicalIndexByType(catchmentId, indexType, year = null) {
+    const session = this.getSession();
+    const yearCondition = year ? 'AND y.year = $year' : '';
+    const query = `
+      MATCH (m:MorphologicalIndex)-[:ANALYZED_IN]->(y:Year),
+            (m)-[:COMPUTED_FOR]->(c:Catchment {id: $catchmentId})
+      WHERE m.type = $indexType ${yearCondition}
+      RETURN m, y
+      ORDER BY y.year DESC
+    `;
+
+    try {
+      const result = await session.run(query, {
+        catchmentId,
+        indexType,
+        ...(year && { year })
+      });
+
+      return result.records.map(r => ({
+        ...r.get('m').properties,
+        year: r.get('y').properties.year
+      }));
+    } finally {
+      await session.close();
+    }
+  }
+
+  async initializeMorphologicalIndexes() {
+    const session = this.getSession();
+    const constraints = [
+      'CREATE INDEX morphological_year IF NOT EXISTS FOR (m:MorphologicalIndex) ON (m.year)',
+      'CREATE INDEX morphological_type IF NOT EXISTS FOR (m:MorphologicalIndex) ON (m.type)',
+      'CREATE INDEX year_value IF NOT EXISTS FOR (y:Year) ON (y.year)'
+    ];
+
+    try {
+      for (const constraint of constraints) {
+        await session.run(constraint);
+      }
+      console.log('[Neo4jService] Morphological indexes initialized');
+    } finally {
+      await session.close();
+    }
+  }
+
   async executeQuery(query, params = {}) {
     const session = this.getSession();
     try {

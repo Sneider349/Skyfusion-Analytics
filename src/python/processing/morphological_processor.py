@@ -9,10 +9,15 @@ Operaciones implementadas:
 - Apertura y Cierre
 - Gradiente Morfológico
 - Top-Hat y Black-Hat
+- Reconstrucción Morfológica (Opening/Closing by Reconstruction)
+- Esqueletización y Thinning
 - Segmentación por Watershed
 - Filtrado de Atributos
-- Extracción de características morfológicas
-- Procesamiento escalable para imágenes grandes
+- Extracción de características morfológicas (20+ features)
+- Clasificación de cobertura de suelo (7 clases)
+- Detección de cambios temporales
+- Procesamiento escalable para imágenes grandes (chunked/tiled)
+- Procesamiento por lotes (batch processing)
 
 Autor: Skyfusion Analytics Team
 Fecha: 2026
@@ -615,58 +620,336 @@ class MorphologicalProcessor:
         return result
     
     # =========================================================================
+    # RECONSTRUCCIÓN MORFOLÓGICA
+    # =========================================================================
+    
+    def morphological_reconstruction_by_erosion(
+        self,
+        marker: np.ndarray,
+        mask: np.ndarray,
+        connectivity: int = 8
+    ) -> np.ndarray:
+        """
+        Reconstrucción morfológica por erosión.
+        
+        Reconstruye objetos basada en marcador y máscara usando
+        dilaciones geodésicas hasta alcanzar punto fijo.
+        
+        Args:
+            marker: Imagen marcador (puntos de partida)
+            mask: Imagen máscara (límite de reconstrucción)
+            connectivity: Conectividad (4 u 8)
+            
+        Returns:
+            Imagen reconstruida
+        """
+        marker = marker.astype(np.uint8)
+        mask = mask.astype(np.uint8)
+        
+        kernel = self.create_kernel(3)
+        previous = np.zeros_like(marker)
+        current = marker.copy()
+        
+        while not np.array_equal(previous, current):
+            previous = current.copy()
+            # Dilatación geodésica
+            dilated = cv2.dilate(current, kernel)
+            # Intersección con máscara
+            current = cv2.bitwise_and(dilated, mask)
+        
+        return current
+    
+    def morphological_reconstruction_by_dilation(
+        self,
+        marker: np.ndarray,
+        mask: np.ndarray,
+        connectivity: int = 8
+    ) -> np.ndarray:
+        """
+        Reconstrucción morfológica por dilatación.
+        
+        Args:
+            marker: Imagen marcador
+            mask: Imagen máscara
+            connectivity: Conectividad
+            
+        Returns:
+            Imagen reconstruida
+        """
+        marker = marker.astype(np.uint8)
+        mask = mask.astype(np.uint8)
+        
+        kernel = self.create_kernel(3)
+        previous = np.zeros_like(marker)
+        current = marker.copy()
+        
+        while not np.array_equal(previous, current):
+            previous = current.copy()
+            # Erosión geodésica
+            eroded = cv2.erode(current, kernel)
+            # Unión con máscara
+            current = cv2.bitwise_or(eroded, mask)
+        
+        return current
+    
+    def opening_by_reconstruction(
+        self,
+        image: np.ndarray,
+        kernel_size: int = 5
+    ) -> np.ndarray:
+        """
+        Apertura por reconstrucción.
+        
+        Preserva mejor las formas que la apertura estándar.
+        Erosión seguida de reconstrucción por dilatación.
+        
+        Args:
+            image: Imagen de entrada
+            kernel_size: Tamaño del kernel
+            
+        Returns:
+            Imagen procesada
+        """
+        kernel = self.create_kernel(kernel_size)
+        eroded = cv2.erode(image, kernel)
+        return self.morphological_reconstruction_by_dilation(eroded, image)
+    
+    def closing_by_reconstruction(
+        self,
+        image: np.ndarray,
+        kernel_size: int = 5
+    ) -> np.ndarray:
+        """
+        Cierre por reconstrucción.
+        
+        Preserva mejor las formas que el cierre estándar.
+        Dilatación seguida de reconstrucción por erosión.
+        
+        Args:
+            image: Imagen de entrada
+            kernel_size: Tamaño del kernel
+            
+        Returns:
+            Imagen procesada
+        """
+        kernel = self.create_kernel(kernel_size)
+        dilated = cv2.dilate(image, kernel)
+        return self.morphological_reconstruction_by_erosion(dilated, image)
+    
+    # =========================================================================
+    # ESQUELETIZACIÓN Y THINNING
+    # =========================================================================
+    
+    def skeletonize(
+        self,
+        image: np.ndarray,
+        method: str = 'zhang_suen'
+    ) -> np.ndarray:
+        """
+        Esqueletiza una imagen binaria usando el algoritmo de Zhang-Suen.
+        
+        Útil para análisis de formas y detección de estructuras lineales
+        (ríos, caminos, redes de drenaje).
+        
+        Args:
+            image: Imagen binaria de entrada
+            method: Algoritmo ('zhang_suen', 'morphological')
+            
+        Returns:
+            Esqueleto binario
+        """
+        # Asegurar binaria
+        if image.max() > 1:
+            _, binary = cv2.threshold(image, 127, 255, cv2.THRESH_BINARY)
+        else:
+            binary = (image * 255).astype(np.uint8)
+        
+        if method == 'morphological':
+            return self._skeletonize_morphological(binary)
+        else:
+            return self._skeletonize_zhang_suen(binary)
+    
+    def _skeletonize_zhang_suen(self, binary: np.ndarray) -> np.ndarray:
+        """
+        Algoritmo de Zhang-Suen para esqueletización.
+        """
+        skeleton = np.zeros_like(binary)
+        img = binary.copy()
+        
+        while True:
+            # Paso 1
+            mask1 = self._zhang_suen_step1(img)
+            img[mask1] = 0
+            
+            # Paso 2
+            mask2 = self._zhang_suen_step2(img)
+            img[mask2] = 0
+            
+            if not np.any(mask1) and not np.any(mask2):
+                break
+        
+        return img
+    
+    def _zhang_suen_step1(self, img: np.ndarray) -> np.ndarray:
+        """Paso 1 del algoritmo Zhang-Suen."""
+        h, w = img.shape
+        mask = np.zeros_like(img, dtype=bool)
+        
+        for i in range(1, h - 1):
+            for j in range(1, w - 1):
+                if img[i, j] == 0:
+                    continue
+                    
+                p = [img[i-1,j], img[i-1,j+1], img[i,j+1], img[i+1,j+1],
+                     img[i+1,j], img[i+1,j-1], img[i,j-1], img[i-1,j-1],
+                     img[i-1,j]]
+                
+                p = [x // 255 for x in p]
+                transitions = sum(abs(p[k] - p[k+1]) for k in range(8))
+                neighbors = sum(p[:8])
+                
+                if (2 <= neighbors <= 6 and transitions == 2 and
+                    p[0] * p[2] * p[4] == 0 and
+                    p[2] * p[4] * p[6] == 0):
+                    mask[i, j] = True
+        
+        return mask
+    
+    def _zhang_suen_step2(self, img: np.ndarray) -> np.ndarray:
+        """Paso 2 del algoritmo Zhang-Suen."""
+        h, w = img.shape
+        mask = np.zeros_like(img, dtype=bool)
+        
+        for i in range(1, h - 1):
+            for j in range(1, w - 1):
+                if img[i, j] == 0:
+                    continue
+                    
+                p = [img[i-1,j], img[i-1,j+1], img[i,j+1], img[i+1,j+1],
+                     img[i+1,j], img[i+1,j-1], img[i,j-1], img[i-1,j-1],
+                     img[i-1,j]]
+                
+                p = [x // 255 for x in p]
+                transitions = sum(abs(p[k] - p[k+1]) for k in range(8))
+                neighbors = sum(p[:8])
+                
+                if (2 <= neighbors <= 6 and transitions == 2 and
+                    p[0] * p[2] * p[6] == 0 and
+                    p[0] * p[4] * p[6] == 0):
+                    mask[i, j] = True
+        
+        return mask
+    
+    def _skeletonize_morphological(self, binary: np.ndarray) -> np.ndarray:
+        """
+        Esqueletización usando operaciones morfológicas.
+        """
+        skeleton = np.zeros_like(binary)
+        temp = binary.copy()
+        kernel = self.create_kernel(3)
+        
+        while True:
+            eroded = cv2.erode(temp, kernel)
+            if np.sum(eroded) == 0:
+                skeleton = cv2.bitwise_or(skeleton, temp)
+                break
+            
+            opened = cv2.morphologyEx(temp, cv2.MORPH_OPEN, kernel)
+            skeleton = cv2.bitwise_or(skeleton, cv2.bitwise_xor(temp, opened))
+            temp = eroded.copy()
+        
+        return skeleton
+    
+    def thin(
+        self,
+        image: np.ndarray,
+        iterations: int = 10
+    ) -> np.ndarray:
+        """
+        Adelgazamiento morfológico (thinning).
+        
+        Reduce objetos a su esqueleto preservando conectividad.
+        
+        Args:
+            image: Imagen binaria
+            iterations: Número de iteraciones
+            
+        Returns:
+            Imagen adelgazada
+        """
+        img = image.copy()
+        
+        kernel_hit = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+        kernel_miss = np.array([[0, 0, 0],
+                                [1, 1, 1],
+                                [1, 1, 1]], dtype=np.uint8)
+        
+        for _ in range(iterations):
+            thin = cv2.morphologyEx(img, cv2.MORPH_HITMISS, kernel_hit)
+            img = cv2.bitwise_and(img, cv2.bitwise_not(thin))
+            
+            thin = cv2.morphologyEx(img, cv2.MORPH_HITMISS, kernel_miss)
+            img = cv2.bitwise_and(img, cv2.bitwise_not(thin))
+        
+        return img
+    
+    # =========================================================================
     # OPERACIONES DE SEGMENTACIÓN AVANZADA
     # =========================================================================
     
     def watershed_segmentation(
         self,
         image: np.ndarray,
-        markers: np.ndarray,
-        mask: Optional[np.ndarray] = None,
+        markers: Optional[np.ndarray] = None,
         use_threshold_marker: bool = False,
-        threshold_value: int = 128
+        threshold_value: int = 128,
+        min_distance: int = 10
     ) -> SegmentationResult:
         """
         Segmentación por Watershed (marcador-controlado).
         
-        Implementa watershed basado en marcadores para separación de objetos
-        que se tocan entre sí.
-        
         Args:
-            image: Imagen de entrada (grayscale o color)
-            markers: Marcadores iniciales (uint8, same shape as image)
-            mask: Máscara opcional para región de interés
-            use_threshold_marker: Si True, genera marcadores阈值 automáticos
-            threshold_value: Valor umbral para生成 marcadores automáticos
+            image: Imagen de entrada (debe ser 3-canal BGR)
+            markers: Marcadores iniciales (opcional, si None se generan)
+            use_threshold_marker: Si True, genera marcadores automáticos
+            threshold_value: Valor umbral
+            min_distance: Distancia mínima entre picos
             
         Returns:
             SegmentationResult con etiquetas y propiedades
         """
-        # Asegurar tipo correcto
-        if len(image.shape) == 3:
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # Asegurar que la imagen sea 3-canal
+        if len(image.shape) == 2:
+            image_3ch = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
         else:
-            gray = image.copy()
+            image_3ch = image.copy()
+        
+        # Obtener gris
+        gray = cv2.cvtColor(image_3ch, cv2.COLOR_BGR2GRAY) if len(image_3ch.shape) == 3 else image_3ch
         
         # Generar marcadores si no se proporcionan
-        if use_threshold_marker:
-            _, markers = cv2.threshold(gray, threshold_value, 255, cv2.THRESH_BINARY)
-            markers = scipy_label(markers)[0]
-        
-        # Asegurar que los marcadores sean int32
-        markers = markers.astype(np.int32)
-        
-        # Aplicar transformada watershed
-        if len(image.shape) == 3:
-            gray_float = np.float32(gray)
+        if markers is None or use_threshold_marker:
+            # Umbral
+            _, binary = cv2.threshold(gray, threshold_value, 255, cv2.THRESH_BINARY_INV)
+            
+            # Distancia transform
+            dist = cv2.distanceTransform(binary, cv2.DIST_L2, 5)
+            cv2.normalize(dist, dist, 0, 1.0, cv2.NORM_MINMAX)
+            
+            # Encontrar picos locales
+            _, sure_fg = cv2.threshold(dist, 0.5 * dist.max(), 255, cv2.THRESH_BINARY)
+            sure_fg = np.uint8(sure_fg)
+            
+            # Etiquetar
+            _, markers = cv2.connectedComponents(sure_fg)
         else:
-            gray_float = np.float32(gray)
+            markers = markers.astype(np.int32)
         
-        # Marker watershed
-        markers = cv2.watershed(image, markers)
+        # Aplicar watershed (requiere int32 y imagen 3-canal)
+        markers = cv2.watershed(image_3ch, markers)
         
-        # Calcular propiedades de segmentos
-        num_segments = len(np.unique(markers)) - 1  # Excluir -1 (bordes)
+        # Calcular propiedades
+        num_segments = len(np.unique(markers)) - 1
         segment_areas = {}
         segment_properties = {}
         
@@ -674,14 +957,13 @@ class MorphologicalProcessor:
             if label == -1:
                 continue
             segment_mask = (markers == label)
-            area = np.sum(segment_mask)
-            segment_areas[int(label)] = int(area)
+            area = int(np.sum(segment_mask))
+            segment_areas[label] = area
             
-            # Propiedades adicionales
             if area > 0:
                 y_coords, x_coords = np.where(segment_mask)
-                segment_properties[int(label)] = {
-                    'area': int(area),
+                segment_properties[label] = {
+                    'area': area,
                     'centroid_x': float(np.mean(x_coords)),
                     'centroid_y': float(np.mean(y_coords)),
                     'bbox_x1': int(np.min(x_coords)),
@@ -690,67 +972,16 @@ class MorphologicalProcessor:
                     'bbox_y2': int(np.max(y_coords))
                 }
         
+        # Crear máscara de bordes
+        boundary_mask = (markers == -1).astype(np.uint8) * 255
+        
         return SegmentationResult(
             labels=markers,
             num_segments=num_segments,
             segment_areas=segment_areas,
-            segment_properties=segment_properties
+            segment_properties=segment_properties,
+            boundary_mask=boundary_mask
         )
-    
-    def markerControlledWatershed(
-        self,
-        image: np.ndarray,
-        foreground_markers: np.ndarray,
-        background_markers: Optional[np.ndarray] = None,
-        kernel_size: int = 3
-    ) -> np.ndarray:
-        """
-        Watershed controlado por marcadores (versión simplificada).
-        
-        Args:
-            image: Imagen de entrada
-            foreground_markers: Marcadores de primer plano
-            background_markers: Marcadores de fondo (opcional)
-            kernel_size: Tamaño para cierre antes de marcadores
-            
-        Returns:
-            Imagen con etiquetas de segmentación
-        """
-        # Asegurar entrada binaria
-        if foreground_markers.max() > 1:
-            _, fg = cv2.threshold(foreground_markers, 127, 255, cv2.THRESH_BINARY)
-        else:
-            fg = (foreground_markers * 255).astype(np.uint8)
-        
-        # Cerrar para smoothing de marcadores
-        kernel = self.create_kernel(kernel_size)
-        fg = cv2.morphologyEx(fg, cv2.MORPH_CLOSE, kernel)
-        
-        # Etiquetar marcadores
-        if background_markers is not None:
-            if background_markers.max() > 1:
-                _, bg = cv2.threshold(background_markers, 127, 255, cv2.THRESH_BINARY)
-            else:
-                bg = (background_markers * 255).astype(np.uint8)
-            bg = cv2.morphologyEx(bg, cv2.MORPH_CLOSE, kernel)
-            
-            # Combinar marcadores
-            markers = fg + bg
-        else:
-            markers = fg
-        
-        # Encontrar distancia y watershed
-        dist = cv2.distanceTransform(markers, cv2.DIST_L2, 5)
-        
-        # Marcadores para watershed
-        _, markers = cv2.threshold(dist, 0.3 * dist.max(), 255, cv2.THRESH_BINARY)
-        markers = np.uint8(markers)
-        markers = scipy_label(markers)[0]
-        
-        # Aplicar watershed
-        result = cv2.watershed(image, markers)
-        
-        return result
     
     def attribute_filtering(
         self,
@@ -1198,6 +1429,134 @@ class MorphologicalProcessor:
             profile['black_hat'].append(self.black_hat(image, scale, kernel_type))
         
         return profile
+    
+    # =========================================================================
+    # PROCESAMIENTO POR LOTES (BATCH)
+    # =========================================================================
+    
+    def batch_process(
+        self,
+        images: List[np.ndarray],
+        operation: MorphologicalOperation,
+        kernel_size: int = None,
+        kernel_type: MorphologicalKernelType = None,
+        verbose: bool = False,
+        **kwargs
+    ) -> List[np.ndarray]:
+        """
+        Procesa múltiples imágenes en lote.
+        
+        Args:
+            images: Lista de imágenes
+            operation: Operación morfológica
+            kernel_size: Tamaño del kernel
+            kernel_type: Tipo de kernel
+            verbose: Mostrar progreso
+            **kwargs: Args adicionales
+            
+        Returns:
+            Lista de imágenes procesadas
+        """
+        results = []
+        total = len(images)
+        
+        for i, img in enumerate(images):
+            if verbose:
+                print(f"Procesando {i+1}/{total}...", end='\r')
+            
+            result = self.process_chunked(
+                img, operation,
+                kernel_size=kernel_size,
+                kernel_type=kernel_type,
+                **kwargs
+            )
+            results.append(result)
+        
+        if verbose:
+            print(f"Procesadas {total} imagenes")
+        
+        return results
+    
+    def batch_classify(
+        self,
+        image_sets: List[Dict[str, np.ndarray]],
+        classifier=None
+    ) -> List:
+        """
+        Clasifica múltiples conjuntos de imágenes en lote.
+        
+        Args:
+            image_sets: Lista de dicts con bandas {'nir', 'red', 'green', 'blue'}
+            classifier: Clasificador (opcional)
+            
+        Returns:
+            Lista de resultados de clasificación
+        """
+        if classifier is None:
+            from classification_processor import LandCoverClassifier
+            classifier = LandCoverClassifier()
+        
+        results = []
+        total = len(image_sets)
+        
+        for i, bands in enumerate(image_sets):
+            result = classifier.classify(
+                bands.get('nir'),
+                bands.get('red'),
+                bands.get('green'),
+                bands.get('blue')
+            )
+            results.append(result)
+        
+        return results
+    
+    def batch_change_detection(
+        self,
+        before_images: List[np.ndarray],
+        after_images: List[np.ndarray],
+        operation: MorphologicalOperation = None,
+        kernel_size: int = 5
+    ) -> List[Dict[str, Any]]:
+        """
+        Detecta cambios entre pares de imágenes en lote.
+        
+        Args:
+            before_images: Lista de imágenes "antes"
+            after_images: Lista de imágenes "después"
+            operation: Operación para pre-procesamiento
+            kernel_size: Tamaño del kernel
+            
+        Returns:
+            Lista de diccionarios de cambios
+        """
+        from indices_processor import EnvironmentalIndexProcessor
+        idx_proc = EnvironmentalIndexProcessor()
+        
+        changes = []
+        
+        for before, after in zip(before_images, after_images):
+            # Convertir a escala de grises
+            if len(before.shape) == 3:
+                before_gray = cv2.cvtColor(before, cv2.COLOR_BGR2GRAY)
+                after_gray = cv2.cvtColor(after, cv2.COLOR_BGR2GRAY)
+            else:
+                before_gray = before
+                after_gray = after
+            
+            # Calcular diferencia
+            mask, contours = idx_proc.detect_change(before_gray, after_gray)
+            
+            # Aplicar attribute filtering para limpiar
+            if operation is not None:
+                filtered = self.attribute_filtering(mask, min_area=100)
+                _, contours = cv2.findContours(filtered, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            # Clasificar cambios
+            change_info = idx_proc.classify_changes(contours, min_area=100)
+            change_info['total_pixels_changed'] = int(np.sum(mask > 0))
+            changes.append(change_info)
+        
+        return changes
     
     # =========================================================================
     # GUARDADO Y METADATOS

@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-05-13T19:41:09.890950",
+  "class_labels": {
+    "0": "agua",
+    "1": "vegetacion_densa",
+    "2": "vegetacion_moderada",
+    "3": "vegetacion_escasa",
+    "4": "suelo_desnudo",
+    "5": "area_urbana",
+    "6": "otro"
+  },
+  "class_areas": {
+    "agua": 12122,
+    "vegetacion_densa": 14354,
+    "vegetacion_moderada": 39060,
+    "vegetacion_escasa": 0,
+    "suelo_desnudo": 0,
+    "area_urbana": 0,
+    "otro": 0
+  },
+  "class_percentages": {
+    "agua": 18.4967041015625,
+    "vegetacion_densa": 21.9024658203125,
+    "vegetacion_moderada": 59.600830078125,
+    "vegetacion_escasa": 0.0,
+    "suelo_desnudo": 0.0,
+    "area_urbana": 0.0,
+    "otro": 0.0
+  },
+  "total_pixels": 65536
+}
